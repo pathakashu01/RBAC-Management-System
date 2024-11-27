@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RBAC Management System</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f0f2f5;
+      margin: 20px;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 14px;
+      color: white;
+      background-color: #007bff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    .modal-overlay, .modal {
+      display: none;
+    }
+
+    .form {
+      max-width: 400px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .error {
+      color: red;
+      font-size: 12px;
+    }
+
+    .logout-btn {
+      float: right;
+      margin-top: -50px;
+    }
+  </style>
+</head>
+<body>
+  <h1>RBAC Management System</h1>
+
+  <div id="loginForm" class="form">
+    <h2>Login</h2>
+    <form id="login">
+      <label for="loginEmail">Email:</label>
+      <input type="email" id="loginEmail" required placeholder="Enter your email" />
+
+      <label for="loginPassword">Password:</label>
+      <input type="password" id="loginPassword" required placeholder="Enter your password" />
+
+      <p class="error" id="loginError"></p>
+
+      <div class="form-actions">
+        <button type="submit">Login</button>
+        <button type="button" onclick="showRegister()">Register</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="registerForm" class="form hidden">
+    <h2>Register</h2>
+    <form id="register">
+      <label for="registerEmail">Email:</label>
+      <input type="email" id="registerEmail" required placeholder="Enter your email" />
+
+      <label for="registerPassword">Password:</label>
+      <input type="password" id="registerPassword" required placeholder="Enter your password" />
+
+      <label for="registerRole">Role:</label>
+      <select id="registerRole">
+        <option value="Admin">Admin</option>
+        <option value="User">User</option>
+        <option value="Guest">Guest</option>
+      </select>
+
+      <p class="error" id="registerError"></p>
+
+      <div class="form-actions">
+        <button type="submit">Register</button>
+        <button type="button" onclick="showLogin()">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="dashboard" class="hidden">
+    <button class="logout-btn" onclick="logout()">Logout</button>
+    <h2>Welcome, <span id="currentUserName"></span>!</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody"></tbody>
+    </table>
+    <button id="addUserBtn" onclick="openUserForm()" class="hidden">Add User</button>
+  </div>
+
+  <script>
+    let users = JSON.parse(localStorage.getItem('users')) || [];
+    let accounts = JSON.parse(localStorage.getItem('accounts')) || [];
+    let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+
+    document.getElementById('login').addEventListener('submit', handleLogin);
+    document.getElementById('register').addEventListener('submit', handleRegister);
+
+    function showLogin() {
+      document.getElementById('registerForm').classList.add('hidden');
+      document.getElementById('loginForm').classList.remove('hidden');
+    }
+
+    function showRegister() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.remove('hidden');
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      const account = accounts.find(acc => acc.email === email && acc.password === password);
+
+      if (account) {
+        currentUser = account;
+        localStorage.setItem('currentUser', JSON.stringify(account));
+        renderDashboard();
+      } else {
+        document.getElementById('loginError').textContent = 'Invalid credentials!';
+      }
+    }
+
+    function handleRegister(event) {
+      event.preventDefault();
+      const email = document.getElementById('registerEmail').value;
+      const password = document.getElementById('registerPassword').value;
+      const role = document.getElementById('registerRole').value;
+
+      if (accounts.some(acc => acc.email === email)) {
+        document.getElementById('registerError').textContent = 'Email already exists!';
+        return;
+      }
+
+      accounts.push({ email, password, role });
+      localStorage.setItem('accounts', JSON.stringify(accounts));
+      alert('Registration successful!');
+      showLogin();
+    }
+
+    function renderDashboard() {
+      if (currentUser) {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        document.getElementById('currentUserName').textContent = currentUser.email;
+
+        // Show Add User button if the user is an Admin
+        if (currentUser.role === 'Admin') {
+          document.getElementById('addUserBtn').classList.remove('hidden');
+        } else {
+          document.getElementById('addUserBtn').classList.add('hidden');
+        }
+
+        renderUserTable();
+      } else {
+        document.getElementById('dashboard').classList.add('hidden');
+        document.getElementById('loginForm').classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      localStorage.removeItem('currentUser');
+      renderDashboard();
+    }
+
+    function renderUserTable() {
+      const tableBody = document.getElementById('userTableBody');
+      tableBody.innerHTML = '';
+      users.forEach((user, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${user.name}</td>
+          <td>${user.email}</td>
+          <td>${user.role}</td>
+          <td>
+            ${currentUser.role === 'Admin' ? `<button onclick="deleteUser(${index})">Delete</button>` : ''}
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    function openUserForm() {
+      const name = prompt('Enter Name');
+      const email = prompt('Enter Email');
+      const role = prompt('Enter Role (Admin/User/Guest)');
+      if (name && email && role) {
+        users.push({ name, email, role });
+        localStorage.setItem('users', JSON.stringify(users));
+        renderUserTable();
+      }
+    }
+
+    function deleteUser(index) {
+      users.splice(index, 1);
+      localStorage.setItem('users', JSON.stringify(users));
+      renderUserTable();
+    }
+
+    renderDashboard();
+  </script>
+</body>
+</html>
